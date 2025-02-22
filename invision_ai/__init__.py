@@ -1,0 +1,1 @@
+from .video_annotator import VideoAnnotator
