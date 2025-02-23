@@ -58,7 +58,7 @@ class VideoAnnotator:
             f"This is the CCTV footage of room: `{room_name}`. Mention the room in your output\n"
             "Describe in every single details the events that happened in this CCTV footage. "
             "Make the greatest level of details on everything moving or that changes (ignore what doesn't change). "
-            "List what every person or individual is doing and what happens, using bullet points."
+            "List what every person or individual is doing and what happens, using bullet points. Make a useful report to someone who wants a detail recap of what happened on his CCTV while he was away.\n"
         )
 
         # Generate the content using Google's GenAI.
