@@ -1,3 +1,6 @@
+import json
+import edgedb
+
 class DBHandler:
     """
     A generic database handler that abstracts database operations.
@@ -5,33 +8,9 @@ class DBHandler:
     Later, you can replace this with real DB logic.
     """
     def __init__(self):
-        # Hardcoded mapping as a stub for demonstration.
-        self.room_mapping = {
-            "camera1": "backyard",
-            "camera2": "main lobby",
-            "camera3": "parking lot",
-        }
+        self.client = edgedb.create_client()
 
-        self.camera_details = {
-            "camera1": {
-                "camera_name": "Shop Front",
-                "rules": [
-                    {"id": "1", "text": "No unauthorized entry."},
-                    {"id": "2", "text": "Do not obstruct walkways."},
-                    {"id": "3", "text": "No throwing packages into the lawn."},
-                ],
-            },
-            "camera2": {
-                "camera_name": "Main Lobby",
-                "rules": [
-                    {"id": "3", "text": "Maintain professional behavior."},
-                    {"id": "4", "text": "No loitering in the corridors."},
-                ],
-            },
-            # Add more cameras as needed.
-        }
-
-    def get_camera_details(self, camera_id: str) -> dict:
+    def get_camera_rules(self, camera_id: str, user_id: str) -> dict:
         """
         Retrieve camera details including camera name and associated code-of-conduct rules.
 
@@ -43,21 +22,67 @@ class DBHandler:
                   - 'camera_name': Name of the camera (or None if not found)
                   - 'rules': List of rule objects (each with 'id' and 'text'). Returns an empty list if no rules are found.
         """
-        return self.camera_details.get(camera_id, {"camera_name": None, "rules": []})
+        result1 = json.loads(self.client.query_single_json("""
+            with user_found := (SELECT User FILTER .id = <uuid>$user_id),
+            SELECT {
+                rules := (
+                    SELECT user_found.rules {
+                        rooms: {
+                            name
+                        },
+                        text,
+                        id,
+                        shared
+                    }                                  
+                ),
+                room_search := (
+                    SELECT Camera {
+                         room: {
+                            name
+                        }
+                    }              
+                    FILTER .id = <uuid>$camera_id
+                    LIMIT 1
+                )    
+            }
+        """, user_id=user_id, camera_id=camera_id))
 
-    def get_room_name(self, camera_id: str) -> str:
+        room_name = result1["room_search"]["room"]["name"]
+        rules = result1["rules"]
+
+        # filter rules, keep only if either: shared or rooms contain the room_name
+        rules = [rule for rule in rules if rule["shared"] or room_name in [room["name"] for room in rule["rooms"]]]
+
+        return {
+            "camera_name": room_name,
+            "rules": rules
+        }
+
+        
+
+    def get_camera_name(self, camera_id: str) -> str:
         """
-        Retrieve the room name (i.e. camera name) associated with the provided camera_id.
+        Retrieve the camera name associated with a given camera_id.
 
         Args:
             camera_id (str): Unique identifier for the camera.
 
         Returns:
-            str: The camera name, or None if not found.
+            str: The camera name.
         """
-        details = self.get_camera_details(camera_id)
-        return details.get("camera_name", None)
-
+        result = json.loads(self.client.query_single_json(
+            """
+            SELECT Camera {
+                name
+            }
+            FILTER .id = <uuid>$camera_id;
+            """,
+            camera_id=camera_id,
+        ))
+        if result:
+            return result["name"]
+        else:
+            raise ValueError(f"Camera with ID {camera_id} not found.")
 
     def get_room_name(self, camera_id: str) -> str:
         """
@@ -69,5 +94,19 @@ class DBHandler:
         Returns:
             str: The room name.
         """
-        # In a real implementation, you'd query your DB here.
-        return self.room_mapping.get(camera_id, "shop front")
+
+        result = json.loads(self.client.query_single_json(
+            """
+            SELECT Camera {
+                room: {
+                    name
+                }
+            }
+            FILTER .id = <uuid>$camera_id;
+            """,
+            camera_id=camera_id,
+        ))
+        if result:
+            return result["room"]["name"]
+        else:
+            raise ValueError(f"Room with ID {camera_id} not found.")
