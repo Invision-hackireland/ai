@@ -55,10 +55,10 @@ class VideoAnnotator:
 
         # Compose the prompt with room information.
         prompt = (
-            f"This is the CCTV footage of room: `{room_name}`.\n"
-            "Describe in every single detail the events that happened in this CCTV footage. "
-            "Only focus on the actions (ignore what doesn't change). "
-            "List what every person or individual is doing, using bullet points."
+            f"This is the CCTV footage of room: `{room_name}`. Mention the room in your output\n"
+            "Describe in every single details the events that happened in this CCTV footage. "
+            "Make the greatest level of details on everything moving or that changes (ignore what doesn't change). "
+            "List what every person or individual is doing and what happens, using bullet points."
         )
 
         # Generate the content using Google's GenAI.

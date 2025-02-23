@@ -7,7 +7,7 @@ class DBHandler:
     def __init__(self):
         # Hardcoded mapping as a stub for demonstration.
         self.room_mapping = {
-            "camera1": "shop front",
+            "camera1": "backyard",
             "camera2": "main lobby",
             "camera3": "parking lot",
         }
