@@ -28,6 +28,7 @@ class DBHandler:
                 rules := (
                     SELECT user_found.rules {
                         rooms: {
+                            id,
                             name
                         },
                         text,

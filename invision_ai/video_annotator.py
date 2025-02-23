@@ -32,7 +32,7 @@ class VideoAnnotator:
         self.client = genai.Client(api_key=api_key, http_options=HttpOptions(api_version=api_version))
         self.db_handler = db_handler if db_handler is not None else DBHandler()
 
-    def run(self, camera_id: str, video_file_path: str) -> str:
+    def run(self, camera_id: str, video_file_path: str, user_id) -> str:
         """
         Process the video file and generate a detailed activity report.
 
@@ -45,6 +45,10 @@ class VideoAnnotator:
         """
         # Retrieve room name using the external DBHandler.
         room_name = self.db_handler.get_room_name(camera_id)
+        camera_details = self.db_handler.get_camera_rules(camera_id, user_id)
+        rules = camera_details.get("rules", [])
+
+        rules_text = "\n".join([f"Rule {rule['id']}: {rule['text']}" for rule in rules])
 
         # Read the video file as bytes.
         try:
@@ -58,8 +62,13 @@ class VideoAnnotator:
             f"This is the CCTV footage of room: `{room_name}`. Mention the room in your output\n"
             "Describe in every single details the events that happened in this CCTV footage. "
             "Make the greatest level of details on everything moving or that changes (ignore what doesn't change). "
-            "List what every person or individual is doing and what happens, using bullet points. Make a useful report to someone who wants a detail recap of what happened on his CCTV while he was away.\n"
+            "\n The goal of this report is to flag / log any event that could breach code of conduct rules. Here is examples of rules:\n"
+            f"\n<rules-example>\n{rules_text}\n</rules-example>\n\n"
+            "List what every person or individual is doing and what happens, using bullet points. Where they come from, where they are going, etc... Make a useful report to someone who wants a detail recap of what happened on his CCTV while he was away.\n"
         )
+
+        with open("prompt.txt", "w") as f:
+            f.write(prompt)
 
         # Generate the content using Google's GenAI.
         response = self.client.models.generate_content(
